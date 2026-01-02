@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  comfyui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: comfyui-sage:latest
+    container_name: comfyui-sage
+    ports:
+      - "8188:8188"
+      - "8888:8888"
+      - "2222:22"
+    volumes:
+      # persist your models, output, and settings:
+      - /workspace/comfyui/models:/app/ComfyUI/models
+
+      # persist your output images:
+      - /workspace/comfyui/output:/app/ComfyUI/output
+
+      # persist all your settings & extra nodes:
+      - /workspace/comfyui/settings:/app/ComfyUI/user/default:rw
+
+      - /workspace/comfyui/flows:/app/ComfyUI/user/default/workflows:rw
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
