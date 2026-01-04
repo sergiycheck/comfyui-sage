@@ -42,7 +42,7 @@ COPY --from=builder /build/custom_nodes/ComfyUI-Manager/requirements.txt /tmp/ma
 RUN pip --no-cache-dir install -r /tmp/comfyui.txt \
  && pip --no-cache-dir install -r /tmp/manager.txt \
  && pip --no-cache-dir install huggingface-hub \
- && pip --no-cache-dir install sageattention==2.2.0 --no-build-isolation && \
+ && pip --no-cache-dir install sageattention==2.2.0 --no-build-isolation \
  && rm -rf /tmp /root/.cache/pip
 
 # Runtime layout
