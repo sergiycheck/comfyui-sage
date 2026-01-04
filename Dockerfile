@@ -11,42 +11,31 @@ ARG UBUNTU_VERSION=ubuntu2404
 FROM alpine/git AS builder
 
 WORKDIR /build
+RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI.git
 
-# Clone repos to extract requirements
-RUN git clone --depth 1 https://github.com/comfyanonymous/ComfyUI.git && \
-    git clone --depth 1 https://github.com/ltdrdata/ComfyUI-Manager.git
+WORKDIR /custom_nodes
+RUN git clone --depth 1 https://github.com/ltdrdata/ComfyUI-Manager.git
 
 # =============================================================================
 # Final stage - install dependencies
 # =============================================================================
 FROM runpod/pytorch:${RUNPOD_VERSION}-${CUDA_VERSION}-${TORCH_VERSION}-${UBUNTU_VERSION}
 
-# Re-declare ARGs
-ARG SAGE_ATTENTION_VERSION=2.2.0
-ARG CUDA_VERSION=cu1281
-ARG TORCH_VERSION=torch280
-ARG COMPUTE_CAP=86
-ARG PYTHON_VERSION=cp312
-
 WORKDIR /tmp
 
 # Copy only requirements files from builder
 COPY --from=builder /build/ComfyUI/requirements.txt /tmp/comfyui-requirements.txt
-COPY --from=builder /build/ComfyUI-Manager/requirements.txt /tmp/manager-requirements.txt
+COPY --from=builder /custom_nodes/ComfyUI-Manager/requirements.txt /tmp/manager-requirements.txt
 
 # Install all dependencies
 RUN pip --no-cache-dir install -r comfyui-requirements.txt && \
     pip --no-cache-dir install -r manager-requirements.txt && \
     pip --no-cache-dir install huggingface-hub && \
-    pip --no-cache-dir install https://github.com/sergiycheck/comfyui-sage/releases/download/sage/sageattention-${SAGE_ATTENTION_VERSION}+${CUDA_VERSION}${TORCH_VERSION}cc${COMPUTE_CAP}-${PYTHON_VERSION}-${PYTHON_VERSION}-linux_x86_64.whl && \
+    pip --no-cache-dir install sageattention==2.2.0 --no-build-isolation && \
     rm -rf /tmp/*.txt /root/.cache/pip
 
-# Copy start script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+WORKDIR /workspace
+COPY --from=builder /build/ComfyUI ComfyUI
+COPY --from=builder /custom_nodes/ComfyUI-Manager ComfyUI/custom_nodes
 
-# Expose ports for SSH, Jupyter, and ComfyUI
-EXPOSE 22 8888 8188
-
-# Set default command to run start script
-CMD ["/start.sh"]
+CMD ["python", "main.py", "--listen", "0.0.0.0"]
